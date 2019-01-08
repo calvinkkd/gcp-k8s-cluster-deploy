@@ -1,0 +1,9 @@
+{% for namespace in k8s_namespaces %}
+---
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ namespace }}
+
+{% endfor %}

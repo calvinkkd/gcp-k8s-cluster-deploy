@@ -1,0 +1,36 @@
+---
+- hosts:
+    - master
+    - node
+  remote_user: '{{ k8s_ssh_user }}'
+  become: true
+  roles:
+    - role: cni
+      k8s_master_hosts: '{{ groups["master"] }}'
+
+- hosts: master
+  remote_user: '{{ k8s_ssh_user }}'
+  become: true
+
+  vars:
+    # Kubernetes configs path
+    k8s_conf_dir: /etc/kubernetes
+    k8s_cni_dir: '{{ k8s_conf_dir }}/cni'
+
+  tasks:
+
+    - name: Awaiting for k8s API
+      wait_for:
+        host: 127.0.0.1
+        port: 8080
+
+    - name: Awaiting for nodes
+      wait_for:
+        host: '{{ item }}'
+        port: 10250
+        state: drained
+      with_items: '{{ groups["node"] }}'
+
+    - name: Start cni
+      command: '{{ k8s_cni_dir }}/deploy-cni.sh'
+      when: inventory_hostname in groups["master"][0]

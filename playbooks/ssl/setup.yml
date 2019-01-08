@@ -1,0 +1,86 @@
+---
+- hosts:
+    - master
+  remote_user: '{{ k8s_ssh_user }}'
+  become: true
+  pre_tasks:
+    - name: Check CA 
+      stat:
+        path: '{{ ssl_dir }}/ca.pem'
+      register: cacheck
+      when: inventory_hostname in groups['master'][0]
+  roles:
+    - role: ssl
+      ssl_ca_only: true
+      when: inventory_hostname in groups['master'][0] and not cacheck.stat.exists
+  post_tasks:
+    - name: Check CA 
+      stat:
+        path: '{{ ssl_dir }}/ca.key'
+      register: cakey
+      when: inventory_hostname in groups['master'][0]
+    - name: Get CA locally
+      fetch:
+        src: '{{ ssl_dir }}/ca.pem'
+        dest: '{{ inventory_dir }}/.certs/ca/'
+        flat: yes
+      when: inventory_hostname in groups['master'][0] and not cakey.stat.exists
+    - name: Get CA key locally
+      fetch:
+        src: '{{ ssl_dir }}/ca-key.pem'
+        dest: '{{ inventory_dir }}/.certs/ca/'
+        flat: yes
+      when: inventory_hostname in groups['master'][0] and not cakey.stat.exists
+
+- hosts:
+    - master
+    - node
+  remote_user: '{{ k8s_ssh_user }}'
+  become: true
+  pre_tasks:
+    - name: Copy CA
+      copy:
+        src: '{{ inventory_dir }}/.certs/ca/'
+        dest: '{{ ssl_dir }}'
+  roles:
+    - role: ssl
+      ssl_hosts: "{{ groups['master'] + groups['node'] }}"
+      ssl_ips: "{{ (groups['master']+groups['node'])|map('extract', hostvars, 'ansible_default_ipv4')|map(attribute='address')|list }}"
+      ssl_custom:
+        - 'kubernetes'
+        - 'kubernetes.default'
+        - 'kubernetes.default.svc'
+        - 'kubernetes.default.svc.{{ k8s_cluster_domain }}'
+        - '{{ k8s_master_name }}'
+        - '{{ k8s_services_name }}'
+        - '{{ k8s_registry_name }}'
+        - '127.0.0.1'
+        - '{{ k8s_cluster_service_ip }}'
+        - '{{ k8s_master_external_ip | default("master") }}'
+        - '{{ k8s_services_external_ip | default("services") }}'
+      ssl_clients:
+        - name: kubelet
+          cn: system:node:{{ inventory_hostname }}
+          org: 
+            - system:nodes
+        - name: kube-proxy
+          cn: system:kube-proxy
+          org:
+            - system:nodes
+        - name: controller
+          cn: system:kube-controller-manager
+          org: {}
+        - name: scheduler
+          cn: system:kube-scheduler
+          org: {}
+        - name: admin
+          cn: system:admin
+          org:
+            - system:masters
+        - name: auth-proxy
+          cn: system:auth-proxy
+          org: {}
+        - name: kube-aggregator
+          cn: system:kube-aggregator
+          org:
+            - system:masters

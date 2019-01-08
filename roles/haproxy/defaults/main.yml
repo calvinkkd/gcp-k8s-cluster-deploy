@@ -1,0 +1,42 @@
+---
+# HAProxy port used for stats
+haproxy_stats_port: 7111
+
+# HAProxy check attributes
+haproxy_check_interval: 5000
+haproxy_check_rise: 3
+haproxy_check_fall: 3
+
+# HAProxy services
+# List of services which use TCP LB
+haproxy_services: {}
+# Example:
+#  - name: node-80
+#    port: 80
+#    httpRedirect: true
+#  - name: node-443
+#    port: 443
+#    nodePort: 443
+#    httpCheck:
+#      path: /healthz
+#      status: 200
+#    sslProxy: true
+#  - name: whoisd
+#    port: 43
+#    nodePort: 30043
+
+# Hosts names
+haproxy_hosts: {}
+
+# SSL dir for haproxy 
+haproxy_ssl_dir: /etc/haproxy/ssl
+
+# SSL certificate and private key for running user services into Kubernetes
+k8s_services_cert: |
+  ----BEGIN CERTIFICATE----
+  - Your certificate here -
+  -----END CERTIFICATE-----
+k8s_services_cert_key: |
+  ----BEGIN PRIVATE KEY----
+  - Your private key here -
+  -----END PRIVATE KEY-----

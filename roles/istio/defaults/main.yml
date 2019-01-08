@@ -1,0 +1,83 @@
+---
+# Log level 0 - debug
+k8s_log_level: 3
+# Use to increase verbosity on particular files, e.g. k8s_log_spec=token_controller*=5,other_controller*=4
+k8s_log_spec: ''
+
+# Istio version
+istio_version: 0.2.7
+
+# Switch using of auth policy
+k8s_istio_auth: false
+
+# Namespace for Istio
+k8s_istio_namespace: istio-system
+
+# It will be used as the Internal dns domain name if DNS is enabled.
+# Services will be discoverable under
+# <service-name>.<namespace>.svc.<domainname>.<clustername>, e.g.
+# myservice.default.svc.k8s.cluster
+k8s_domain_name: k8s
+k8s_cluster_name: cluster
+k8s_cluster_domain: '{{ k8s_domain_name }}.{{ k8s_cluster_name }}'
+
+# Organization name which used in `O` attribute of certificates
+ssl_org: organization-name
+
+# SSL base certificate name
+# SSL folder and file names will use the same name
+ssl_name: kubernetes
+
+# Path to files with SSL certificates and keys
+ssl_dir: /etc/ssl/kubernetes
+
+# Kubernetes configs path
+k8s_conf_dir: /etc/kubernetes
+k8s_istio_dir: '{{ k8s_conf_dir }}/istio'
+
+# Executable files path
+k8s_bin_dir: /usr/local/bin
+
+tmp_dir: /tmp
+
+# Master hosts names
+k8s_master_hosts: {}
+
+# Nodes hosts names
+k8s_node_hosts: {}
+
+# Istio images
+k8s_istio_pilot_image: gcr.io/istio-io/pilot
+k8s_istio_pilot_image_tag: '{{ istio_version }}'
+k8s_istio_mixer_image: gcr.io/istio-io/mixer
+k8s_istio_mixer_image_tag: '{{ istio_version }}'
+k8s_istio_proxy_image: gcr.io/istio-io/proxy
+k8s_istio_proxy_image_tag: '{{ istio_version }}'
+k8s_istio_proxy_init_image: gcr.io/istio-io/proxy_init
+k8s_istio_proxy_init_image_tag: '{{ istio_version }}'
+k8s_istio_sidecar_initializer_image: gcr.io/istio-io/sidecar_initializer
+k8s_istio_sidecar_initializer_image_tag: '{{ istio_version }}'
+k8s_istio_ca_image: gcr.io/istio-io/istio-ca
+k8s_istio_ca_image_tag: '{{ istio_version }}'
+
+# Additional istio images
+k8s_istio_prometheus_image: quay.io/coreos/prometheus
+k8s_istio_prometheus_image_tag: v1.1.1
+k8s_istio_prometheus_statsd_exporter_image: prom/statsd-exporter
+k8s_istio_prometheus_statsd_exporter_image_tag: v0.4.0
+k8s_istio_zipkin_image: openzipkin/zipkin
+k8s_istio_zipkin_image_tag: 2.0.1
+k8s_istio_grafana_image: gcr.io/istio-io/grafana
+k8s_istio_grafana_image_tag: '{{ istio_version }}'
+k8s_istio_servicegraph_image: gcr.io/istio-io/servicegraph
+k8s_istio_servicegraph_image_tag: '{{ istio_version }}'
+
+# SSL certificate and private key for running user services into Kubernetes
+k8s_services_cert: |
+  ----BEGIN CERTIFICATE----
+  - Your certificate here -
+  -----END CERTIFICATE-----
+k8s_services_cert_key: |
+  ----BEGIN PRIVATE KEY----
+  - Your private key here -
+  -----END PRIVATE KEY-----

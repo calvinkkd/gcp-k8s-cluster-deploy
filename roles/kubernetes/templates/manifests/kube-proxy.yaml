@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+spec:
+  hostNetwork: true
+  containers:
+  - name: kube-proxy
+    image: {{ k8s_hyperkube_image }}:{{ k8s_hyperkube_image_tag }}
+    command:
+    - /hyperkube
+    - proxy
+    - --feature-gates=AllAlpha=false
+    - --master={{ k8s_url_scheme }}://{% if inventory_hostname in k8s_master_hosts %}127.0.0.1{% else %}{{ k8s_master_external_ip | default(k8s_master_name)  }}{% endif %}:{{ k8s_api_port }}
+    - --hostname-override={{ inventory_hostname }}
+    - --kubeconfig={{ k8s_policy_dir }}/kube-proxy.kubeconfig
+    - --v={{ k8s_log_level }}
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: policy
+      mountPath: {{ k8s_policy_dir }}
+      readOnly: true
+    - name: certificates
+      mountPath: {{ ssl_dir }}
+      readOnly: true
+  volumes:
+  - name: policy
+    hostPath:
+      path: {{ k8s_policy_dir }}
+  - name: certificates
+    hostPath:
+      path: {{ ssl_dir }}

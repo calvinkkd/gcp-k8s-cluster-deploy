@@ -1,0 +1,31 @@
+---
+# Kubernetes version
+k8s_version: 1.8.5
+
+# Helm package manager version
+helm_version: 2.7.2
+
+# Golang compiller version
+go_version: 1.9.2
+
+# Account name of remote user. Ansible will use this user account to ssh into
+# the build machines. The user must be able to use sudo without asking
+# for password for build components
+k8s_build_ssh_user: dev
+
+# Docker registry host name
+k8s_registry_name: registry.your-domain-name
+
+# Docker registry auth code
+k8s_docker_registry_auth_code: 'docker-registry-auth-code'
+
+# Executable files path
+k8s_bin_dir: /usr/bin
+
+# Go tools path
+go_dir: /usr/local
+
+# Go sources/packages path in home directory
+go_path: 'gocode'
+
+tmp_dir: /tmp

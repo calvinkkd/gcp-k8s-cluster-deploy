@@ -1,0 +1,126 @@
+---
+- name: Check ssl directory
+  file:
+    path: '{{ ssl_dir }}'
+    state: directory
+    mode: 0755
+
+- name: Get certificates generator
+  get_url:
+    url: "https://pkg.cfssl.org/R1.2/cfssl_{{ ansible_system|lower }}-amd64"
+    dest: "{{ ssl_bin_dir }}/cfssl"
+    mode: 0655
+
+- name: Get certificates json saver
+  get_url:
+    url: "https://pkg.cfssl.org/R1.2/cfssljson_{{ ansible_system|lower }}-amd64"
+    dest: "{{ ssl_bin_dir }}/cfssljson"
+    mode: 0655
+
+- name: Check CA 
+  stat:
+    path: '{{ ssl_dir }}/ca.pem'
+  register: ca
+
+- name: Setup CSR settings
+  template:
+    src: csr-ca.json.j2
+    dest: '{{ ssl_dir }}/csr-ca.json'
+    mode: 0644
+  when: not ca.stat.exists
+
+- name: Generate CA
+  shell: '{{ ssl_bin_dir }}/cfssl gencert -initca csr-ca.json | {{ ssl_bin_dir }}/cfssljson -bare ca'
+  args:
+    chdir: '{{ ssl_dir }}'
+  when: not ca.stat.exists
+
+- name: Remove CA CSR and config
+  file:
+    path: '{{ ssl_dir }}/{{ item }}'
+    state: absent
+  when: not ca.stat.exists
+  with_items:
+    - ca.csr
+    - csr-ca.json
+
+- name: Setup CA
+  copy:
+    src: '{{ ssl_dir }}/ca.pem'
+    dest: /etc/pki/ca-trust/source/anchors/ca.pem
+    remote_src: true
+  notify:
+    - enable ca certificate
+    - extract ca certificate
+
+- name: Setup CSR common settings
+  template:
+    src: csr-common.json.j2
+    dest: '{{ ssl_dir }}/csr-common.json'
+    mode: 0644
+  when: not ssl_ca_only
+
+- name: Setup config
+  template:
+    src: config.json.j2
+    dest: '{{ ssl_dir }}/config.json'
+    mode: 0644
+  when: not ssl_ca_only
+
+- name: Setup clients CSR settings
+  template:
+    src: csr-client.json.j2
+    dest: '{{ ssl_dir }}/csr-{{ item.name }}.json'
+    mode: 0644
+  when: not ssl_ca_only
+  with_items: '{{ ssl_clients }}'
+
+- name: Generate certificates
+  shell: '{{ ssl_bin_dir }}/cfssl gencert -ca ca.pem -ca-key ca-key.pem -config=config.json -profile=kubernetes csr-common.json | {{ ssl_bin_dir }}/cfssljson -bare {{ ssl_name }}'
+  args:
+    chdir: '{{ ssl_dir }}'
+  when: not ssl_ca_only
+
+- name: Generate clients certificates
+  shell: '{{ ssl_bin_dir }}/cfssl gencert -ca ca.pem -ca-key ca-key.pem -config=config.json -profile=kubernetes csr-{{ item.name }}.json | {{ ssl_bin_dir }}/cfssljson -bare client-{{ item.name }}'
+  args:
+    chdir: '{{ ssl_dir }}'
+  when: not ssl_ca_only
+  with_items: '{{ ssl_clients }}'
+
+- name: Remove CSR configs
+  file:
+    path: '{{ ssl_dir }}/{{ item }}'
+    state: absent
+  when: not ssl_ca_only
+  with_items:
+    - config.json
+    - csr-common.json
+    - '{{ ssl_name }}.csr'
+
+- name: Remove clients CSR configs
+  file:
+    path: '{{ ssl_dir }}/csr-{{ item.name }}.json'
+    state: absent
+  when: not ssl_ca_only
+  with_items: '{{ ssl_clients }}'
+
+- name: Remove clients CSR
+  file:
+    path: '{{ ssl_dir }}/client-{{ item.name }}.csr'
+    state: absent
+  when: not ssl_ca_only
+  with_items: '{{ ssl_clients }}'
+
+- name: Correct key rights
+  file:
+    path: '{{ ssl_dir }}/{{ ssl_name }}-key.pem'
+    mode: 0644
+  when: not ssl_ca_only
+
+- name: Correct clients key rights
+  file:
+    path: '{{ ssl_dir }}/client-{{ item.name }}-key.pem'
+    mode: 0644
+  when: not ssl_ca_only
+  with_items: '{{ ssl_clients }}'

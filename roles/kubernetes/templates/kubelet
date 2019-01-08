@@ -1,0 +1,30 @@
+###
+# kubernetes kubelet config
+
+# The address for the info server to serve on (set to 0.0.0.0 or "" for all interfaces)
+KUBELET_ADDRESS="--address=0.0.0.0"
+
+# The port for the info server to serve on
+# KUBELET_PORT="--port=10250"
+
+# You may leave this blank to use the actual hostname
+KUBELET_HOSTNAME="--hostname-override={{ inventory_hostname }}"
+
+KUBELET_ARGS="--allow-privileged=true \
+--cgroup-driver=systemd \
+--cgroups-per-qos=true \
+--client-ca-file={{ ssl_dir }}/ca.pem \
+--cni-bin-dir={{ cni_bin_dir }} \
+--cni-conf-dir={{ cni_conf_dir }} \
+--cluster-dns={{ k8s_cluster_dns }} \
+--cluster-domain={{ k8s_cluster_domain }} \
+--fail-swap-on=false \
+--kubeconfig={{ k8s_policy_dir }}/kubelet.kubeconfig \
+--network-plugin=cni \
+--node-labels={% if inventory_hostname in k8s_master_hosts %}node-role.kubernetes.io/master=true{% else %}node-role.kubernetes.io/node=true{% endif %} \
+--pod-manifest-path={{ k8s_manifests_dir }} \
+--register-node=true {% if inventory_hostname in k8s_master_hosts %}--register-with-taints=node-role.kubernetes.io/master=true:NoSchedule {% endif %}\
+--require-kubeconfig=true \
+--serialize-image-pulls=false \
+--v={{ k8s_log_level }} \
+--vmodule={{ k8s_log_spec }}"

@@ -1,0 +1,74 @@
+---
+- name: Install dependencies
+  yum:
+    name: '{{ item }}'
+    state: present
+  when: ansible_user_id != k8s_build_ssh_user
+  with_items:
+    - socat
+
+- name: Check kubernetes config directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: 0755
+  with_items:
+    - '{{ ansible_env.HOME }}/.docker'
+
+- name: Default docker auth
+  template:
+    src: docker-config.json.j2
+    dest: "{{ ansible_env.HOME }}/.docker/config.json"
+
+- name: Get kubectl
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-release/release/v{{ k8s_version }}/bin/{{ ansible_system|lower }}/amd64/kubectl'
+    dest: '{{ k8s_bin_dir }}/kubectl'
+    mode: 0755
+    force: yes
+  when: ansible_user_id != k8s_build_ssh_user
+
+- name: Get Golang
+  unarchive:
+    src: 'https://storage.googleapis.com/golang/go{{ go_version }}.{{ ansible_system|lower }}-amd64.tar.gz'
+    dest: '{{ go_dir }}'
+    remote_src: true
+  when: ansible_user_id != k8s_build_ssh_user
+
+- name: Setup custom GOPATH
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: 0755
+  with_items:
+    - '{{ ansible_env.HOME }}/{{ go_path }}/src'
+    - '{{ ansible_env.HOME }}/{{ go_path }}/pkg'
+    - '{{ ansible_env.HOME }}/{{ go_path }}/bin'
+
+- name: register Go environment
+  lineinfile:
+    dest: '{{ ansible_env.HOME }}/.bashrc'
+    line: 'export GOPATH=$HOME/{{ go_path }}'
+
+- name: register PATH environment
+  lineinfile:
+    dest: '{{ ansible_env.HOME }}/.bashrc'
+    line: 'export PATH=$PATH:{{ go_dir }}/go/bin:$GOPATH/bin'
+
+- name: Get helm
+  unarchive:
+    src: 'https://kubernetes-helm.storage.googleapis.com/helm-v{{ helm_version }}-{{ ansible_system|lower }}-amd64.tar.gz'
+    dest: '{{ tmp_dir }}'
+    remote_src: true
+  when: ansible_user_id != k8s_build_ssh_user
+
+- name: Setup helm
+  copy:
+    src: '{{ tmp_dir }}/{{ ansible_system|lower }}-amd64/helm'
+    dest: '{{ k8s_bin_dir }}/helm'
+    mode: 0755
+    remote_src: true
+  when: ansible_user_id != k8s_build_ssh_user
+
+- name: Init helm
+  command: helm init --client-only
